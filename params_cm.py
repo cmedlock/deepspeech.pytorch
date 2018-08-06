@@ -21,8 +21,8 @@ noise_max  = 0.5 # maximum noise level to sample from (1.0 means all noise and n
 # Dataset location
 # Note: for ResNet50 must use pre-aligned transcription (e.g., TIMIT)
 labels_path    = './labels.json' #Contains all characters for prediction
-train_manifest = './manifest_files/libri_train_clean_100_manifest.csv' #relative path to train manifest
-val_manifest = './manifest_files/libri_val_clean_manifest.csv' #relative path to val manifest
+train_manifest = './manifest_files/100_files_manifest.csv' #relative path to train manifest
+val_manifest = './manifest_files/100_files_manifest.csv' #relative path to val manifest
 
 # Model parameters
 hidden_size   = 768 # Hidden size of RNNs
@@ -33,7 +33,7 @@ rnn_act_type  = 'relu' #Type of the activation within RNN. tanh | relu are suppo
 bidirectional = False # Whether or not RNN is uni- or bi-directional
 
 # Training parameters
-epochs          = 25 # Number of training epochs
+epochs          = 2 # Number of training epochs
 learning_anneal = 1.1 # Annealing applied to learning rate every epoch
 lr              = 0.0003 # Initial learning rate
 momentum        = 0.9 # Momentum
