@@ -9,7 +9,7 @@ import sys
 sys.path.append('..')
 
 from python_speech_features import sigproc
-from data.data_loader import load_audio
+from data.data_loader_cm import load_audio
 
 import params_cm
 
@@ -28,7 +28,7 @@ fig = plt.figure(figsize=(8,4))
 counter = 0
 n_files = len(os.listdir(wav_dir_))
 print('# of files = ',n_files)
-for fname in os.listdir(wav_dir_)[:5]:
+for fname in ['1116-132847-0018.wav']:#os.listdir(wav_dir_)[:5]:
     # Load data
     audio_path = wav_dir_+fname
     speech = load_audio(audio_path)
