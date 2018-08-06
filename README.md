@@ -1,6 +1,6 @@
 # Summary
 
-CM: Documentation of summer 2018 internship project using Sean Naren's implementation of DeepSpeech2. Comments that I added to the existing documentation are marked with 'CM'.
+CM: Documentation of summer 2018 internship project using Sean Naren's implementation of DeepSpeech2. Comments that I added to the existing documentation are marked with 'CM'. Files that I added have the suffix '_cm'.
 
 # deepspeech.pytorch
 
