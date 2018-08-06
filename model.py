@@ -7,11 +7,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 
-supported_rnns = {
-    'lstm': nn.LSTM,
-    'rnn': nn.RNN,
-    'gru': nn.GRU
-}
+supported_rnns = {'lstm': nn.LSTM,'rnn': nn.RNN,'gru': nn.GRU}
 supported_rnns_inv = dict((v, k) for k, v in supported_rnns.items())
 
 
@@ -143,8 +139,8 @@ class Lookahead(nn.Module):
 
 
 class DeepSpeech(nn.Module):
-    def __init__(self, rnn_type=nn.LSTM, labels="abc", rnn_hidden_size=768, nb_layers=5, audio_conf=None,
-                 bidirectional=True, context=20):
+    def __init__(self, feature_type, rnn_type=nn.RNN, labels='abc', rnn_hidden_size=768, nb_layers=5,
+                 audio_conf=None, bidirectional=True, context=20):
         super(DeepSpeech, self).__init__()
 
         # model metadata needed for serialization/deserialization
@@ -158,6 +154,8 @@ class DeepSpeech(nn.Module):
         self._labels = labels
         self._bidirectional = bidirectional
 
+        self._feature_type = feature_type
+        
         sample_rate = self._audio_conf.get("sample_rate", 16000)
         window_size = self._audio_conf.get("window_size", 0.02)
         num_classes = len(self._labels)
@@ -170,12 +168,21 @@ class DeepSpeech(nn.Module):
             nn.BatchNorm2d(32),
             nn.Hardtanh(0, 20, inplace=True)
         ))
-        # Based on above convolutions and spectrogram size using conv formula (W - F + 2P)/ S+1
-        rnn_input_size = int(math.floor((sample_rate * window_size) / 2) + 1)
-        rnn_input_size = int(math.floor(rnn_input_size + 2 * 20 - 41) / 2 + 1)
+        print('self._feature_type = ',self._feature_type)
+        if self._feature_type=='spectrogram':
+            frame_len_ = self.sample_rate*self.window_size # ndft = frame_len_
+            feature_size = frame_len/2+1 # keep only non-negative frequencies
+        elif self._feature_type=='mfcc':
+            feature_size = 39 # 13 MFCCs + 13 deltas + 13 double deltas
+        elif self._feature_type=='logmel':
+            feature_size = 78 # 26 log Mel-FB coefficients + 26 deltas + 26 double deltas
+        # Based on above convolutions and feature size using conv formula (W - F + 2P)/ S+1
+        rnn_input_size = int(math.floor(feature_size + 2 * 20 - 41) / 2 + 1)
         rnn_input_size = int(math.floor(rnn_input_size + 2 * 10 - 21) / 2 + 1)
         rnn_input_size *= 32
-        
+        print('feature_size = ',feature_size)
+        print('rnn_input_size = ',rnn_input_size)
+
         rnns = []
         rnn = BatchRNN(input_size=rnn_input_size, hidden_size=rnn_hidden_size, rnn_type=rnn_type,
                        bidirectional=bidirectional, batch_norm=False)

@@ -107,8 +107,9 @@ if __name__ == '__main__':
                       noise_levels=(noise_min_,noise_max_))
 
     rnn_type = rnn_type_.lower()
-    assert rnn_type in supported_rnns, "rnn_type should be either lstm, rnn or gru"
-    model = DeepSpeech(rnn_hidden_size=hidden_size_,
+    assert rnn_type in supported_rnns, 'rnn_type should be either lstm, rnn or gru'
+    model = DeepSpeech(feature_type=feature_type_,
+                       rnn_hidden_size=hidden_size_,
                        nb_layers=hidden_layers_,
                        labels=labels,
                        rnn_type=supported_rnns[rnn_type],
@@ -149,6 +150,7 @@ if __name__ == '__main__':
                 break
             inputs, targets, input_percentages, target_sizes = data
             input_sizes = input_percentages.mul_(int(inputs.size(3))).int()
+
             # Measure data loading time
             data_time.update(time.time() - end)
 
