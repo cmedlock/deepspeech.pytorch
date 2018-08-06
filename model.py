@@ -530,7 +530,7 @@ class Wav2Letter(nn.Module):
         }
         return meta
 
-        @staticmethod
+    @staticmethod
     def is_parallel(model):
         return isinstance(model, torch.nn.parallel.DataParallel) or \
                isinstance(model, torch.nn.parallel.DistributedDataParallel)

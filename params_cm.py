@@ -3,8 +3,8 @@
 ###########################################################
 
 # Model and feature type
-model_type = 'Wav2Letter' # DeepSpeech, Wav2Letter, or ResNet50
-feature_type = 'logmel' # rawspeech (Wav2Letter), rawframes (DeepSpeech), spectrogram, mfcc, or logmel
+model_type = 'Wav2Letter' # DeepSpeech or Wav2Letter
+feature_type = 'mfcc' # rawspeech (Wav2Letter), rawframes (DeepSpeech), spectrogram, mfcc, or logmel
 
 # Audio sampling parameters
 sample_rate   = 16000 # Sample rate
