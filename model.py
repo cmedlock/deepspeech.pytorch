@@ -159,7 +159,9 @@ class DeepSpeech(nn.Module):
         sample_rate = self._audio_conf.get("sample_rate", 16000)
         window_size = self._audio_conf.get("window_size", 0.02)
         num_classes = len(self._labels)
-
+        frame_len = sample_rate*window_size
+        ndft = frame_len
+        
         self.conv = MaskConv(nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=(41, 11), stride=(2, 2), padding=(20, 5)),
             nn.BatchNorm2d(32),
@@ -168,9 +170,10 @@ class DeepSpeech(nn.Module):
             nn.BatchNorm2d(32),
             nn.Hardtanh(0, 20, inplace=True)
         ))
-        if self._feature_type=='spectrogram':
-            frame_len_ = self.sample_rate*self.window_size # ndft = frame_len_
-            feature_size = frame_len/2+1 # keep only non-negative frequencies
+        if self._feature_type=='rawframes':
+            feature_size = frame_len
+        elif self._feature_type=='spectrogram':
+            feature_size = ndft/2+1 # keep only non-negative frequencies
         elif self._feature_type=='mfcc':
             feature_size = 39 # 13 MFCCs + 13 deltas + 13 double deltas
         elif self._feature_type=='logmel':

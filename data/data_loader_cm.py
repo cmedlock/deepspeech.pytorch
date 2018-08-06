@@ -114,24 +114,25 @@ class FeatureParser(AudioParser):
             add_noise = np.random.binomial(1, self.noise_prob)
             if add_noise:
                 y = self.noiseInjector.inject_noise(y)
-        #n_dft = int(self.sample_rate * self.window_size)
-        #win_length = int(self.sample_rate * self.window_size)
-        #hop_length = int(self.sample_rate * self.window_stride)
+        # Split audio into frames
+        frame_len_ = self.sample_rate*self.window_size
+        frame_step_ = self.sample_rate*self.window_stride
+        frames = sigproc.framesig(y,frame_len=frame_len_,frame_step=frame_step_)
+        # Compute features
         features = None
-        if self.feature_type=='spectrogram':
-            # Spectrogram
-            frame_len_ = self.sample_rate*self.window_size
-            frame_step_ = self.sample_rate*self.window_stride
-            frames = sigproc.framesig(y,frame_len=frame_len_,frame_step=frame_step_)
-            features = sigproc.magspec(frames,NFFT=int(frame_len_))
-            #features = np.log1p(features)
+        if self.feature_type=='rawspeech':
+            # Raw speech signal (dimension = 1 X # of samples)
+            y = y.reshape((1,len(y)))
+            features = y
+            features = torch.FloatTensor(features)
+        elif self.feature_type=='rawframes':
+            # Raw speech frames (dimension = # of frames X frame length)
+            features = frames
             features = torch.FloatTensor(features.transpose())
-            if self.normalize:
-                mean = torch.mean(features,0,keepdim=True)
-                mean = torch.cat([mean]*features.size(0))
-                std = torch.std(features,0,keepdim=True)
-                std =torch.cat([std]*features.size(0))
-                features = (features-mean)/std
+        elif self.feature_type=='spectrogram':
+            # Spectrogram
+            features = sigproc.magspec(frames,NFFT=int(frame_len_))
+            features = torch.FloatTensor(features.transpose())
         elif self.feature_type=='mfcc':
             # MFCCs
             mfcc_feat = mfcc(y,self.sample_rate,winlen=self.window_size,winstep=self.window_stride,
@@ -142,12 +143,21 @@ class FeatureParser(AudioParser):
             delta = torch.FloatTensor(delta.transpose())
             deltadelta = torch.FloatTensor(deltadelta.transpose())
             features = torch.cat((mfcc_feat,delta,deltadelta),0)
-            if self.normalize:
-                mean = torch.mean(features,0,keepdim=True)
-                mean = torch.cat([mean]*features.size(0))
-                std = torch.std(features,0,keepdim=True)
-                std =torch.cat([std]*features.size(0))
-                features = (features-mean)/std
+        elif self.feature_type=='logmel':
+            # Log Mel-FB features
+            logmel_feat = logfbank(y,self.sample_rate,winlen=self.window_size,winstep=self.window_stride,nfilt=26)
+            delta = mfccdelta(logmel_feat,2)
+            deltadelta = mfccdelta(delta,2)
+            logmel_feat = torch.FloatTensor(logmel_feat.transpose())
+            delta = torch.FloatTensor(delta.transpose())
+            deltadelta = torch.FloatTensor(deltadelta.transpose())
+            features = torch.cat((logmel_feat,delta,deltadelta),0)
+        if self.normalize:
+            mean = torch.mean(features,0,keepdim=True)
+            mean = torch.cat([mean]*features.size(0))
+            std = torch.std(features,0,keepdim=True)
+            std =torch.cat([std]*features.size(0))
+            features = (features-mean)/std
         return features
 
     def parse_transcript(self, transcript_path):

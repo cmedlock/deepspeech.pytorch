@@ -102,6 +102,14 @@ if __name__ == '__main__':
     # Define model
     rnn_type = rnn_type_.lower()
     assert rnn_type in supported_rnns, 'rnn_type should be either lstm, rnn or gru'
+    assert feature_type_ in ['rawspeech','rawframes','spectrogram','mfcc','logmel'],\
+    'feature_type_ should be rawspeech, rawframes, spectrogram, mfcc, or logmel'
+    if feature_type_=='rawspeech' and model_type_=='DeepSpeech':
+        print('Error: Use rawframes for DeepSpeech instead of rawspeech')
+        raise SystemExit
+    elif feature_type_=='rawframes' and model_type_=='Wav2Letter':
+        print('Error: Use rawspeech for Wav2Letter instead of rawframes')
+        raise SystemExit
     model = DeepSpeech(feature_type=feature_type_,
                        rnn_hidden_size=hidden_size_,
                        nb_layers=hidden_layers_,
