@@ -1,0 +1,104 @@
+###########################################################
+# Fixed parameters for speech recognition
+###########################################################
+
+# Model and feature type
+model_type = 'Wav2Letter' # DeepSpeech or Wav2Letter
+feature_type = 'mfcc' # rawspeech (Wav2Letter), rawframes (DeepSpeech), spectrogram, mfcc, or logmel
+
+# Audio sampling parameters
+sample_rate   = 16000 # Sample rate
+window_size   = 0.02 # Window size for spectrogram in seconds
+window_stride = 0.01 # Window stride for spectrogram in seconds
+window        = 'hamming' # Window type to generate spectrogram
+
+# Audio noise parameters
+noise_dir  = None # directory to inject noise
+noise_prob = 0.4 # probability of noise being added per sample
+noise_min  = 0.0 # minimum noise level to sample from (1.0 means all noise and no original signal)
+noise_max  = 0.5 # maximum noise level to sample from (1.0 means all noise and no original signal)
+
+# Dataset and model save location
+# Note: for ResNet50 must use pre-aligned transcription (e.g., TIMIT)
+labels_path    = './labels.json' #Contains all characters for prediction
+train_manifest = './manifest_files_cm/libri_train_clean_360_manifest.csv' #relative path to train manifest
+val_manifest = './manifest_files_cm/libri_val_clean_manifest.csv' #relative path to val manifest
+model_path = 'models/deepspeech_rawspeech.pth' # Location to save best validation model
+
+# Model parameters
+hidden_size   = 768 # Hidden size of RNNs
+hidden_layers = 5 # Number of RNN layers
+bias          = True  # Use biases
+rnn_type      = 'rnn' #Type of the RNN. rnn|gru|lstm are supported
+rnn_act_type  = 'relu' #Type of the activation within RNN. tanh | relu are supported
+bidirectional = False # Whether or not RNN is uni- or bi-directional
+
+# Training parameters
+epochs          = 70 # Number of training epochs
+learning_anneal = 1.1 # Annealing applied to learning rate every epoch
+lr              = 0.0003 # Initial learning rate
+momentum        = 0.9 # Momentum
+max_norm        = 200 # Norm cutoff to prevent explosion of gradients
+l2              = 0 # L2 regularization
+batch_size      = 20 # Batch size for training
+augment         = True # Use random tempo and gain perturbations
+exit_at_acc     = True # Exit at given target accuracy
+num_workers     = 4 # Number of workers used in data-loading
+cuda            = True # Use cuda to train model
+
+Number of parameters: 23610500
+Wav2Letter(
+  (conv): MaskConv(
+    (seq_module): Sequential(
+      (0): Conv2d(1, 250, kernel_size=(39, 48), stride=(1, 2), padding=(0, 24))
+      (1): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (2): ReLU(inplace)
+      (3): Conv2d(250, 250, kernel_size=(1, 7), stride=(1, 1), padding=(0, 3))
+      (4): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (5): ReLU(inplace)
+      (6): Conv2d(250, 250, kernel_size=(1, 7), stride=(1, 1), padding=(0, 3))
+      (7): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU(inplace)
+      (9): Conv2d(250, 250, kernel_size=(1, 7), stride=(1, 1), padding=(0, 3))
+      (10): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (11): ReLU(inplace)
+      (12): Conv2d(250, 250, kernel_size=(1, 7), stride=(1, 1), padding=(0, 3))
+      (13): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (14): ReLU(inplace)
+      (15): Conv2d(250, 250, kernel_size=(1, 7), stride=(1, 1), padding=(0, 3))
+      (16): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (17): ReLU(inplace)
+      (18): Conv2d(250, 250, kernel_size=(1, 7), stride=(1, 1), padding=(0, 3))
+      (19): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (20): ReLU(inplace)
+      (21): Conv2d(250, 250, kernel_size=(1, 7), stride=(1, 1), padding=(0, 3))
+      (22): BatchNorm2d(250, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (23): ReLU(inplace)
+      (24): Conv2d(250, 2000, kernel_size=(1, 32), stride=(1, 1), padding=(0, 15))
+      (25): BatchNorm2d(2000, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (26): ReLU(inplace)
+    )
+  )
+  (fc): Sequential(
+    (0): SequenceWise (
+    Sequential(
+      (0): BatchNorm1d(2000, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (1): Linear(in_features=2000, out_features=2000, bias=True)
+      (2): BatchNorm1d(2000, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): Linear(in_features=2000, out_features=29, bias=False)
+    ))
+  )
+  (inference_softmax): InferenceBatchSoftmax()
+)
+Shuffling batches for the following epochs
+Epoch: [1][1/5201]	Time 5.990 (5.990)	Data 5.424 (5.424)	Loss 1544.8466 (1544.8466)	
+Epoch: [1][2/5201]	Time 0.620 (3.305)	Data 0.007 (2.715)	Loss 1679.0104 (1611.9285)	
+Epoch: [1][3/5201]	Time 0.227 (2.279)	Data 0.008 (1.813)	Loss 313.2592 (1179.0387)	
+Epoch: [1][4/5201]	Time 0.543 (1.845)	Data 0.000 (1.360)	Loss 1321.1611 (1214.5693)	
+Epoch: [1][5/5201]	Time 4.380 (2.352)	Data 3.709 (1.830)	Loss 1366.7927 (1245.0140)	
+Epoch: [1][6/5201]	Time 0.615 (2.063)	Data 0.019 (1.528)	Loss 1109.6725 (1222.4571)	
+Epoch: [1][7/5201]	Time 0.483 (1.837)	Data 0.005 (1.310)	Loss 990.6914 (1189.3477)	
+Epoch: [1][8/5201]	Time 0.308 (1.646)	Data 0.001 (1.147)	Loss 459.1675 (1098.0752)	
+Epoch: [1][9/5201]	Time 3.833 (1.889)	Data 3.341 (1.390)	Loss 841.0970 (1069.5220)	
+Epoch: [1][10/5201]	Time 1.080 (1.808)	Data 0.493 (1.301)	Loss 862.3074 (1048.8006)	
+Epoch: [1][11/5201]	Time 0.558 (1.694)	Data 0.005 (1.183)	Loss 853.1859 (1031.0174)	

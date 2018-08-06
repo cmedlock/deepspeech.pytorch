@@ -83,6 +83,9 @@ class AverageMeter(object):
 
 
 if __name__ == '__main__':
+ 
+    with open('params_cm.py', 'r') as param_file:
+        print(param_file.read())
     
     # Load symbols
     with open(labels_path_) as label_file:
@@ -116,11 +119,12 @@ if __name__ == '__main__':
                            rnn_type=supported_rnns[rnn_type],
                            audio_conf=audio_conf,
                            bidirectional=bidirectional_)
+        print('Number of parameters: %d' % DeepSpeech.get_param_size(model))
     elif model_type_=='Wav2Letter':
         model = Wav2Letter(feature_type=feature_type_,labels=labels,audio_conf=audio_conf)
+        print('Number of parameters: %d' % Wav2Letter.get_param_size(model))
     parameters = model.parameters()
-    #print(model)
-    #print("Number of parameters: %d" % DeepSpeech.get_param_size(model))
+    print(model)
 
     # Define optimizer
     optimizer = torch.optim.SGD(parameters, lr=lr_,momentum=momentum_, nesterov=True)

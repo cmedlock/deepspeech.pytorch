@@ -21,9 +21,9 @@ noise_max  = 0.5 # maximum noise level to sample from (1.0 means all noise and n
 # Dataset and model save location
 # Note: for ResNet50 must use pre-aligned transcription (e.g., TIMIT)
 labels_path    = './labels.json' #Contains all characters for prediction
-train_manifest = './manifest_files/100_files_manifest.csv' #relative path to train manifest
-val_manifest = './manifest_files/100_files_manifest.csv' #relative path to val manifest
-model_path = 'models/deepspeech_final.pth' # Location to save best validation model
+train_manifest = './manifest_files_cm/libri_train_clean_360_manifest.csv' #relative path to train manifest
+val_manifest = './manifest_files_cm/libri_val_clean_manifest.csv' #relative path to val manifest
+model_path = 'models/deepspeech_rawspeech.pth' # Location to save best validation model
 
 # Model parameters
 hidden_size   = 768 # Hidden size of RNNs
@@ -34,7 +34,7 @@ rnn_act_type  = 'relu' #Type of the activation within RNN. tanh | relu are suppo
 bidirectional = False # Whether or not RNN is uni- or bi-directional
 
 # Training parameters
-epochs          = 2 # Number of training epochs
+epochs          = 70 # Number of training epochs
 learning_anneal = 1.1 # Annealing applied to learning rate every epoch
 lr              = 0.0003 # Initial learning rate
 momentum        = 0.9 # Momentum
