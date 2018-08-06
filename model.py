@@ -168,7 +168,6 @@ class DeepSpeech(nn.Module):
             nn.BatchNorm2d(32),
             nn.Hardtanh(0, 20, inplace=True)
         ))
-        print('self._feature_type = ',self._feature_type)
         if self._feature_type=='spectrogram':
             frame_len_ = self.sample_rate*self.window_size # ndft = frame_len_
             feature_size = frame_len/2+1 # keep only non-negative frequencies
@@ -180,8 +179,6 @@ class DeepSpeech(nn.Module):
         rnn_input_size = int(math.floor(feature_size + 2 * 20 - 41) / 2 + 1)
         rnn_input_size = int(math.floor(rnn_input_size + 2 * 10 - 21) / 2 + 1)
         rnn_input_size *= 32
-        print('feature_size = ',feature_size)
-        print('rnn_input_size = ',rnn_input_size)
 
         rnns = []
         rnn = BatchRNN(input_size=rnn_input_size, hidden_size=rnn_hidden_size, rnn_type=rnn_type,

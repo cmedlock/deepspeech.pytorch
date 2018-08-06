@@ -85,19 +85,12 @@ class AverageMeter(object):
 
 
 if __name__ == '__main__':
-    main_proc = True
-
-    loss_results = torch.Tensor(epochs_)
-    cer_results = torch.Tensor(epochs_)
-    wer_results = torch.Tensor(epochs_)
-    best_wer = None
-
-    avg_loss = 0
-    start_epoch = 0
-    start_iter = 0
+    
+    # Load symbols
     with open(labels_path_) as label_file:
         labels = str(''.join(json.load(label_file)))
 
+    # Load audio parameters
     audio_conf = dict(sample_rate=sample_rate_,
                       window_size=window_size_,
                       window_stride=window_stride_,
@@ -106,6 +99,7 @@ if __name__ == '__main__':
                       noise_prob=noise_prob_,
                       noise_levels=(noise_min_,noise_max_))
 
+    # Define model
     rnn_type = rnn_type_.lower()
     assert rnn_type in supported_rnns, 'rnn_type should be either lstm, rnn or gru'
     model = DeepSpeech(feature_type=feature_type_,
@@ -116,10 +110,17 @@ if __name__ == '__main__':
                        audio_conf=audio_conf,
                        bidirectional=bidirectional_)
     parameters = model.parameters()
+    
+    # Define optimizer
     optimizer = torch.optim.SGD(parameters, lr=lr_,momentum=momentum_, nesterov=True)
 
+    # Define loss function for training
     criterion = CTCLoss()
+    
+    # Define decoder for validation during training
     decoder = GreedyDecoder(labels)
+    
+    # Load and pre-process datasets
     train_dataset = FeatureDataset(audio_conf=audio_conf, feature_type=feature_type_, manifest_filepath=train_manifest_,                                            labels=labels, normalize=True, augment=augment_)
     test_dataset = FeatureDataset(audio_conf=audio_conf, feature_type=feature_type_, manifest_filepath=val_manifest_,                                             labels=labels, normalize=True, augment=False)
 
@@ -127,9 +128,6 @@ if __name__ == '__main__':
 
     train_loader = AudioDataLoader(train_dataset, num_workers=num_workers_, batch_sampler=train_sampler)
     test_loader = AudioDataLoader(test_dataset, batch_size=batch_size_, num_workers=num_workers_)
-
-    print("Shuffling batches for the following epochs")
-    train_sampler.shuffle(start_epoch)
 
     if cuda_:
         model.cuda()
@@ -140,6 +138,19 @@ if __name__ == '__main__':
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
+
+    loss_results = torch.Tensor(epochs_)
+    cer_results = torch.Tensor(epochs_)
+    wer_results = torch.Tensor(epochs_)
+
+    best_wer = None
+
+    avg_loss = 0
+    start_epoch = 0
+    start_iter = 0
+
+    print("Shuffling batches for the following epochs")
+    train_sampler.shuffle(start_epoch)
 
     for epoch in range(start_epoch, epochs_):
         model.train()
@@ -190,6 +201,7 @@ if __name__ == '__main__':
                   (epoch + 1), (i + 1), len(train_sampler), batch_time=batch_time, data_time=data_time, loss=losses))
             del loss
             del out
+            
         avg_loss /= len(train_sampler)
 
         epoch_time = time.time() - start_epoch_time
@@ -243,7 +255,7 @@ if __name__ == '__main__':
             optim_state['param_groups'][0]['lr'] = optim_state['param_groups'][0]['lr'] / learning_anneal_
             optimizer.load_state_dict(optim_state)
             print('Learning rate annealed to: {lr:.6f}'.format(lr=optim_state['param_groups'][0]['lr']))
-            if (best_wer is None or best_wer > wer) and main_proc:
+            if (best_wer is None or best_wer > wer):
                 print("Found better validated model, saving to %s" % model_path_)
                 torch.save(DeepSpeech.serialize(model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
                                                 wer_results=wer_results, cer_results=cer_results), model_path_)
