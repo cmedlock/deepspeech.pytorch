@@ -18,7 +18,6 @@ from model import DeepSpeech, Wav2Letter, supported_rnns
 
 import params_cm
 
-# Read in rest of parameters
 # Model and feature type
 model_type_ = params_cm.model_type
 feature_type_ = params_cm.feature_type
@@ -33,12 +32,11 @@ noise_prob_ = params_cm.noise_prob
 noise_min_ = params_cm.noise_min
 noise_max_ = params_cm.noise_max
 # Dataset and model save location
-# Note: for ResNet50 must use dataset with pre-aligned transcriptions (e.g., TIMIT)
 labels_path_ = params_cm.labels_path
 train_manifest_ = params_cm.train_manifest
 val_manifest_ = params_cm.val_manifest
 model_path_ = params_cm.model_path
-# Model parameters if model type is DeepSpeech
+# Model parameters for DeepSpeech
 hidden_size_ = params_cm.hidden_size
 hidden_layers_ = params_cm.hidden_layers
 bias_ = params_cm.bias
