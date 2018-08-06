@@ -11,6 +11,26 @@ Creates a network based on the [DeepSpeech2](http://arxiv.org/pdf/1512.02595v1.p
 
 * Train DeepSpeech, configurable RNN types and architectures with multi-gpu support.
 * Language model support using kenlm (WIP right now, currently no instructions to build a LM yet).
+
+CM: Follow instructions from the [KenLM website](https://kheafield.com/code/kenlm/),
+
+```
+wget https://kheafield.com/code/kenlm.tar.gz
+tar -xzf kenlm.tar.gz
+mkdir build && cd build
+cmake ..
+make -j2
+```
+Download training texts and/or pre-trained language models from the [OpenSLR website](http://www.openslr.org/resources/11/). To train a 5-gram language model from the corpus ```librispeech-lm-corpus.txt```, do
+```
+cd kenlm
+build/bin/lmplz -o 5 librispeech-lm-corpus.txt 5-gram.arpa
+```
+To convert to binary format (which is necessary to use it in beam search decoding),
+```
+build/build_binary 5-gram.arpa 5-gram.binary
+```
+
 * Multiple dataset downloaders, support for AN4, TED, Voxforge and Librispeech. Datasets can be merged, support for custom datasets included.
 * Noise injection for online training to improve noise robustness.
 * Audio augmentation to improve noise robustness.
