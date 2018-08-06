@@ -1,6 +1,6 @@
 # Summary
 
-Documentation of summer internship, 2018.
+Documentation of summer 2018 internship project using Sean Naren's implementation of DeepSpeech2.
 
 # deepspeech.pytorch
 
