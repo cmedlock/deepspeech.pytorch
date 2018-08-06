@@ -214,8 +214,10 @@ class DeepSpeech(nn.Module):
     def forward(self, x, lengths):
         lengths = lengths.cpu().int()
         output_lengths = self.get_seq_lens(lengths)
+        print('x.size() before convolution = ',x.size())
         x, _ = self.conv(x, output_lengths)
-
+        print('x.size() after convolution = ',x.size())
+        
         sizes = x.size()
         x = x.view(sizes[0], sizes[1] * sizes[2], sizes[3])  # Collapse feature dimension
         x = x.transpose(1, 2).transpose(0, 1).contiguous()  # TxNxH
@@ -226,6 +228,7 @@ class DeepSpeech(nn.Module):
         if not self._bidirectional:  # no need for lookahead layer in bidirectional
             x = self.lookahead(x)
 
+        print('x.size() after rnns = ',x.size())
         x = self.fc(x)
         x = x.transpose(0, 1)
         # identity in training mode, softmax in eval mode
@@ -367,13 +370,14 @@ class Wav2Letter(nn.Module):
                 nn.ReLU(inplace=True),
                 nn.Conv2d(250, 250, kernel_size=(1,48), stride=(1,2), padding=(0,24)),
                 nn.BatchNorm2d(250),
-                nn.ReLU(inplace=True))
+                nn.ReLU(inplace=True)
+            )
         else:
             first_layers = nn.Sequential(
                 nn.Conv2d(1, 250, kernel_size=(feature_size,48), stride=(1,2), padding=(0,24)),
                 nn.BatchNorm2d(250),
-                nn.ReLU(inplace=True))
-        layers = list(first_layers.children())
+                nn.ReLU(inplace=True)
+            )
         next_layers = nn.Sequential(
             nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 3
             nn.BatchNorm2d(250),
@@ -400,22 +404,25 @@ class Wav2Letter(nn.Module):
             nn.BatchNorm2d(2000),
             nn.ReLU(inplace=True)
         )
+        layers = list(first_layers.children())
         layers.extend(list(next_layers.children()))
-        self.conv = nn.Sequential (*layers)
+
+        self.conv = MaskConv(nn.Sequential (*layers))
 
         fully_connected = nn.Sequential(
-            nn.BatchNorm1d(2048),
-            nn.Linear(2048, 2048, bias=True),
-            nn.BatchNorm1d(2048),
-            nn.Linear(2048, num_classes, bias=False)
+            nn.BatchNorm1d(2000),
+            nn.Linear(2000, 2000, bias=True),
+            nn.BatchNorm1d(2000),
+            nn.Linear(2000, num_classes, bias=False)
         )
-        self.fc = nn.Sequential(
-            SequenceWise(fully_connected),
-        )
+        self.fc = nn.Sequential(SequenceWise(fully_connected))
+        
         self.inference_softmax = InferenceBatchSoftmax()
 
-    def forward(self, x):
-        x = self.conv(x)
+    def forward(self, x, lengths):
+        lengths = lengths.cpu().int()
+        output_lengths = self.get_seq_lens(lengths)
+        x, _ = self.conv(x, output_lengths)
 
         sizes = x.size()
         x = x.view(sizes[0], sizes[1] * sizes[2], sizes[3])  # Collapse feature dimension
@@ -424,7 +431,20 @@ class Wav2Letter(nn.Module):
         x = self.fc(x)
         # identity in training mode, softmax in eval mode
         x = self.inference_softmax(x)
-        return x
+        return x, output_lengths
+
+    def get_seq_lens(self, input_length):
+        """
+        Given a 1D Tensor or Variable containing integer sequence lengths, return a 1D tensor or variable
+        containing the size sequences that will be output by the network.
+        :param input_length: 1D Tensor
+        :return: 1D Tensor scaled by model
+        """
+        seq_len = input_length
+        for m in self.conv.modules():
+            if type(m) == nn.modules.conv.Conv2d:
+                seq_len = ((seq_len + 2 * m.padding[1] - m.dilation[1] * (m.kernel_size[1] - 1) - 1) / m.stride[1] + 1)
+        return seq_len.int()
 
     @classmethod
     def load_model(cls, path, feature_type, cuda=False):
@@ -458,8 +478,7 @@ class Wav2Letter(nn.Module):
     @staticmethod
     def serialize(model, optimizer=None, epoch=None, iteration=None, loss_results=None,
                   cer_results=None, wer_results=None, avg_loss=None, meta=None):
-        model_is_cuda = next(model.parameters()).is_cuda
-        model = model.module if model_is_cuda else model
+        model = model.module if Wav2Letter.is_parallel(model) else model
         package = {
             'version': model._version,
             'audio_conf': model._audio_conf,
@@ -510,6 +529,11 @@ class Wav2Letter(nn.Module):
             "version": m._version,
         }
         return meta
+
+        @staticmethod
+    def is_parallel(model):
+        return isinstance(model, torch.nn.parallel.DataParallel) or \
+               isinstance(model, torch.nn.parallel.DistributedDataParallel)
 
 if __name__ == '__main__':
     import os.path

@@ -14,7 +14,7 @@ from warpctc_pytorch import CTCLoss
 from data.data_loader_cm import AudioDataLoader, FeatureDataset, BucketingSampler, supported_feature_types
 from data.utils import reduce_tensor
 from decoder import GreedyDecoder
-from model import DeepSpeech, supported_rnns
+from model import DeepSpeech, Wav2Letter, supported_rnns
 
 import params_cm
 
@@ -109,16 +109,19 @@ if __name__ == '__main__':
     elif feature_type_=='rawframes' and model_type_=='Wav2Letter':
         print('Error: Use rawspeech for Wav2Letter instead of rawframes')
         raise SystemExit
-    model = DeepSpeech(feature_type=feature_type_,
-                       rnn_hidden_size=hidden_size_,
-                       nb_layers=hidden_layers_,
-                       labels=labels,
-                       rnn_type=supported_rnns[rnn_type],
-                       audio_conf=audio_conf,
-                       bidirectional=bidirectional_)
+    model = None
+    if model_type_=='DeepSpeech':
+        model = DeepSpeech(feature_type=feature_type_,
+                           rnn_hidden_size=hidden_size_,
+                           nb_layers=hidden_layers_,
+                           labels=labels,
+                           rnn_type=supported_rnns[rnn_type],
+                           audio_conf=audio_conf,
+                           bidirectional=bidirectional_)
+    elif model_type_=='Wav2Letter':
+        model = Wav2Letter(feature_type=feature_type_,labels=labels,audio_conf=audio_conf)
     parameters = model.parameters()
-    
-    print(model)
+    #print(model)
     #print("Number of parameters: %d" % DeepSpeech.get_param_size(model))
 
     # Define optimizer
@@ -175,6 +178,7 @@ if __name__ == '__main__':
             if cuda_:
                 inputs = inputs.cuda()
 
+            # Run input through network
             out, output_sizes = model(inputs, input_sizes)
             out = out.transpose(0, 1)  # TxNxH
 
@@ -264,8 +268,12 @@ if __name__ == '__main__':
             print('Learning rate annealed to: {lr:.6f}'.format(lr=optim_state['param_groups'][0]['lr']))
             if (best_wer is None or best_wer > wer):
                 print("Found better validated model, saving to %s" % model_path_)
-                torch.save(DeepSpeech.serialize(model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
-                                                wer_results=wer_results, cer_results=cer_results), model_path_)
+                if model_type_=='DeepSpeech':
+                    torch.save(DeepSpeech.serialize(model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
+                                                    wer_results=wer_results, cer_results=cer_results), model_path_)
+                elif model_type_=='Wav2Letter':
+                    torch.save(Wav2Letter.serialize(model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
+                                                    wer_results=wer_results, cer_results=cer_results), model_path_)
                 best_wer = wer
                 avg_loss = 0
 
