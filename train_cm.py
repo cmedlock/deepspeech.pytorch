@@ -18,13 +18,6 @@ from model import DeepSpeech, supported_rnns
 
 import params_cm
 
-parser = argparse.ArgumentParser(description='DeepSpeech training')
-
-parser.add_argument('--no-shuffle', dest='no_shuffle', action='store_true',
-                    help='Turn off shuffling and sample from dataset based on sequence length (smallest to largest)')
-parser.add_argument('--no-sortaGrad', dest='no_sorta_grad', action='store_true',
-                    help='Turn off ordering of dataset on sequence length for the first epoch.')
-
 # Read in rest of parameters
 # Model and feature type
 model_type_ = params_cm.model_type
@@ -93,13 +86,16 @@ class AverageMeter(object):
 
 
 if __name__ == '__main__':
-    args = parser.parse_args()
     main_proc = True
 
-    loss_results, cer_results, wer_results = torch.Tensor(epochs_), torch.Tensor(epochs_), torch.Tensor(epochs_)
+    loss_results = torch.Tensor(epochs_)
+    cer_results = torch.Tensor(epochs_)
+    wer_results = torch.Tensor(epochs_)
     best_wer = None
 
-    avg_loss, start_epoch, start_iter = 0, 0, 0
+    avg_loss = 0
+    start_epoch = 0
+    start_iter = 0
     with open(labels_path_) as label_file:
         labels = str(''.join(json.load(label_file)))
 
@@ -131,14 +127,11 @@ if __name__ == '__main__':
 
     train_sampler = BucketingSampler(train_dataset, batch_size=batch_size_)
 
-    train_loader = AudioDataLoader(train_dataset,
-                                   num_workers=num_workers_, batch_sampler=train_sampler)
-    test_loader = AudioDataLoader(test_dataset, batch_size=batch_size_,
-                                  num_workers=num_workers_)
+    train_loader = AudioDataLoader(train_dataset, num_workers=num_workers_, batch_sampler=train_sampler)
+    test_loader = AudioDataLoader(test_dataset, batch_size=batch_size_, num_workers=num_workers_)
 
-    if (not args.no_shuffle and start_epoch != 0) or args.no_sorta_grad:
-        print("Shuffling batches for the following epochs")
-        train_sampler.shuffle(start_epoch)
+    print("Shuffling batches for the following epochs")
+    train_sampler.shuffle(start_epoch)
 
     if cuda_:
         model.cuda()
@@ -256,8 +249,7 @@ if __name__ == '__main__':
                 torch.save(DeepSpeech.serialize(model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
                                                 wer_results=wer_results, cer_results=cer_results), model_path_)
                 best_wer = wer
-
                 avg_loss = 0
-            if not args.no_shuffle:
-                print("Shuffling batches...")
-                train_sampler.shuffle(epoch)
+
+            print("Shuffling batches...")
+            train_sampler.shuffle(epoch)
