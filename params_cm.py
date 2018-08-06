@@ -18,11 +18,12 @@ noise_prob = 0.4 # probability of noise being added per sample
 noise_min  = 0.0 # minimum noise level to sample from (1.0 means all noise and no original signal)
 noise_max  = 0.5 # maximum noise level to sample from (1.0 means all noise and no original signal)
 
-# Dataset location
+# Dataset and model save location
 # Note: for ResNet50 must use pre-aligned transcription (e.g., TIMIT)
 labels_path    = './labels.json' #Contains all characters for prediction
 train_manifest = './manifest_files/100_files_manifest.csv' #relative path to train manifest
 val_manifest = './manifest_files/100_files_manifest.csv' #relative path to val manifest
+model_path = 'models/deepspeech_final.pth' # Location to save best validation model
 
 # Model parameters
 hidden_size   = 768 # Hidden size of RNNs
@@ -42,3 +43,5 @@ l2              = 0 # L2 regularization
 batch_size      = 20 # Batch size for training
 augment         = True # Use random tempo and gain perturbations
 exit_at_acc     = True # Exit at given target accuracy
+num_workers     = 4 # Number of workers used in data-loading
+cuda            = True # Use cuda to train model
