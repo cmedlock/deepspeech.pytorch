@@ -1,3 +1,7 @@
+# Summary
+
+Documentation of summer 2018 internship project using Sean Naren's implementation of DeepSpeech2.
+
 # deepspeech.pytorch
 
 Implementation of DeepSpeech2 using [Baidu Warp-CTC](https://github.com/baidu-research/warp-ctc).
