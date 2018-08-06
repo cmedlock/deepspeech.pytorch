@@ -18,9 +18,9 @@ from torch.utils.data import Dataset
 from python_speech_features import mfcc, logfbank, sigproc
 from python_speech_features import delta as mfccdelta
 
-windows = {'hamming': scipy.signal.hamming, 'hann': scipy.signal.hann, 'blackman': scipy.signal.blackman,
-           'bartlett': scipy.signal.bartlett}
-
+windows = {'hamming': scipy.signal.hamming, 'hann': scipy.signal.hann,
+           'blackman': scipy.signal.blackman, 'bartlett': scipy.signal.bartlett}
+supported_feature_types = ['rawspeech','rawframes','spectrogram','mfcc','logmel']
 
 def load_audio(path):
     sound, _ = torchaudio.load(path, normalization=True)

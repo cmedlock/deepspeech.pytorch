@@ -156,8 +156,8 @@ class DeepSpeech(nn.Module):
 
         self._feature_type = feature_type
         
-        sample_rate = self._audio_conf.get("sample_rate", 16000)
-        window_size = self._audio_conf.get("window_size", 0.02)
+        sample_rate = self._audio_conf.get('sample_rate', 16000)
+        window_size = self._audio_conf.get('window_size', 0.02)
         num_classes = len(self._labels)
         frame_len = sample_rate*window_size
         ndft = frame_len
@@ -170,14 +170,18 @@ class DeepSpeech(nn.Module):
             nn.BatchNorm2d(32),
             nn.Hardtanh(0, 20, inplace=True)
         ))
+        feature_size = None
         if self._feature_type=='rawframes':
             feature_size = frame_len
         elif self._feature_type=='spectrogram':
-            feature_size = ndft/2+1 # keep only non-negative frequencies
+            # Keep only non-negative frequencies
+            feature_size = ndft/2+1
         elif self._feature_type=='mfcc':
-            feature_size = 39 # 13 MFCCs + 13 deltas + 13 double deltas
+            # 13 MFCCs + 13 deltas + 13 double deltas
+            feature_size = 39
         elif self._feature_type=='logmel':
-            feature_size = 78 # 26 log Mel-FB coefficients + 26 deltas + 26 double deltas
+            # 26 log Mel-FB coefficients + 26 deltas + 26 double deltas
+            feature_size = 78
         # Based on above convolutions and feature size using conv formula (W - F + 2P)/ S+1
         rnn_input_size = int(math.floor(feature_size + 2 * 20 - 41) / 2 + 1)
         rnn_input_size = int(math.floor(rnn_input_size + 2 * 10 - 21) / 2 + 1)
@@ -324,6 +328,188 @@ class DeepSpeech(nn.Module):
         return isinstance(model, torch.nn.parallel.DataParallel) or \
                isinstance(model, torch.nn.parallel.DistributedDataParallel)
 
+
+class Wav2Letter(nn.Module):
+    def __init__(self,feature_type,labels='abc',audio_conf=None):
+        super(Wav2Letter, self).__init__()
+
+        # model metadata needed for serialization/deserialization
+        if audio_conf is None:
+            audio_conf = {}
+        self._version = '0.0.1'
+        self._audio_conf = audio_conf or {}
+        self._labels = labels
+
+        self._feature_type = feature_type
+
+        sample_rate = self._audio_conf.get('sample_rate', 16000)
+        window_size = self._audio_conf.get('window_size', 0.02)
+        window_stride = self._audio_conf.get('window_stride',0.01)
+        num_classes = len(self._labels)
+        frame_step = sample_rate*window_stride
+        
+        feature_size = None
+        if self._feature_type=='rawspeech':
+            feature_size = 1 # original (320-point DFT)
+        elif self._feature_type=='spectrogram':
+            feature_size = 161 # original (320-point DFT)
+            #feature_size = 192 # chosen for MMANet (382-point DFT)
+        elif self._feature_type=='mfcc':
+            feature_size = 39 # original and MMANet
+        elif self._feature_type=='logmel':
+            feature_size = 78
+
+        first_layers = None
+        if self._feature_type=='rawspeech':
+            first_layers = nn.Sequential(
+                nn.Conv2d(1, 250, kernel_size=(feature_size,250),stride=(1,int(frame_step))),
+                nn.BatchNorm2d(250),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(250, 250, kernel_size=(1,48), stride=(1,2), padding=(0,24)),
+                nn.BatchNorm2d(250),
+                nn.ReLU(inplace=True))
+        else:
+            first_layers = nn.Sequential(
+                nn.Conv2d(1, 250, kernel_size=(feature_size,48), stride=(1,2), padding=(0,24)),
+                nn.BatchNorm2d(250),
+                nn.ReLU(inplace=True))
+        layers = list(first_layers.children())
+        next_layers = nn.Sequential(
+            nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 3
+            nn.BatchNorm2d(250),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 4
+            nn.BatchNorm2d(250),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 5
+            nn.BatchNorm2d(250),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 6
+            nn.BatchNorm2d(250),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 7
+            nn.BatchNorm2d(250),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 8
+            nn.BatchNorm2d(250),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(250, 250, kernel_size=(1,7), padding=(0,3)), # 9
+            nn.BatchNorm2d(250),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(250, 2000, kernel_size=(1, 32), padding=(0,15)), # 10
+            nn.BatchNorm2d(2000),
+            nn.ReLU(inplace=True)
+        )
+        layers.extend(list(next_layers.children()))
+        self.conv = nn.Sequential (*layers)
+
+        fully_connected = nn.Sequential(
+            nn.BatchNorm1d(2048),
+            nn.Linear(2048, 2048, bias=True),
+            nn.BatchNorm1d(2048),
+            nn.Linear(2048, num_classes, bias=False)
+        )
+        self.fc = nn.Sequential(
+            SequenceWise(fully_connected),
+        )
+        self.inference_softmax = InferenceBatchSoftmax()
+
+    def forward(self, x):
+        x = self.conv(x)
+
+        sizes = x.size()
+        x = x.view(sizes[0], sizes[1] * sizes[2], sizes[3])  # Collapse feature dimension
+        x = x.transpose(1,2).contiguous()
+
+        x = self.fc(x)
+        # identity in training mode, softmax in eval mode
+        x = self.inference_softmax(x)
+        return x
+
+    @classmethod
+    def load_model(cls, path, feature_type, cuda=False):
+        package = torch.load(path, map_location=lambda storage, loc: storage)
+        model = cls(feature_type,labels=package['labels'],audio_conf=package['audio_conf'])
+        # the blacklist parameters are params that were previous erroneously saved by the model
+        # care should be taken in future versions that if batch_norm on the first rnn is required
+        # that it be named something else
+        blacklist = ['rnns.0.batch_norm.module.weight', 'rnns.0.batch_norm.module.bias',
+                     'rnns.0.batch_norm.module.running_mean', 'rnns.0.batch_norm.module.running_var']
+        for x in blacklist:
+            if x in package['state_dict']:
+                del package['state_dict'][x]
+        model.load_state_dict(package['state_dict'])
+        #for x in model.rnns:
+        #    x.flatten_parameters()
+        if cuda:
+            model = torch.nn.DataParallel(model).cuda()
+        return model
+
+    @classmethod
+    def load_model_package(cls, package, cuda=False):
+        model = cls(rnn_hidden_size=package['hidden_size'], nb_layers=package['hidden_layers'],
+                    labels=package['labels'], audio_conf=package['audio_conf'],
+                    rnn_type=supported_rnns[package['rnn_type']], bidirectional=package.get('bidirectional', True))
+        model.load_state_dict(package['state_dict'])
+        if cuda:
+            model = torch.nn.DataParallel(model).cuda()
+        return model
+
+    @staticmethod
+    def serialize(model, optimizer=None, epoch=None, iteration=None, loss_results=None,
+                  cer_results=None, wer_results=None, avg_loss=None, meta=None):
+        model_is_cuda = next(model.parameters()).is_cuda
+        model = model.module if model_is_cuda else model
+        package = {
+            'version': model._version,
+            'audio_conf': model._audio_conf,
+            'labels': model._labels,
+            'state_dict': model.state_dict(),
+        }
+        if optimizer is not None:
+            package['optim_dict'] = optimizer.state_dict()
+        if avg_loss is not None:
+            package['avg_loss'] = avg_loss
+        if epoch is not None:
+            package['epoch'] = epoch + 1  # increment for readability
+        if iteration is not None:
+            package['iteration'] = iteration
+        if loss_results is not None:
+            package['loss_results'] = loss_results
+            package['cer_results'] = cer_results
+            package['wer_results'] = wer_results
+        if meta is not None:
+            package['meta'] = meta
+        return package
+
+    @staticmethod
+    def get_labels(model):
+        model_is_cuda = next(model.parameters()).is_cuda
+        return model.module._labels if model_is_cuda else model._labels
+
+    @staticmethod
+    def get_param_size(model):
+        params = 0
+        for p in model.parameters():
+            tmp = 1
+            for x in p.size():
+                tmp *= x
+            params += tmp
+        return params
+
+    @staticmethod
+    def get_audio_conf(model):
+        model_is_cuda = next(model.parameters()).is_cuda
+        return model.module._audio_conf if model_is_cuda else model._audio_conf
+
+    @staticmethod
+    def get_meta(model):
+        model_is_cuda = next(model.parameters()).is_cuda
+        m = model.module if model_is_cuda else model
+        meta = {
+            "version": m._version,
+        }
+        return meta
 
 if __name__ == '__main__':
     import os.path

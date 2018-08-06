@@ -11,7 +11,7 @@ from warpctc_pytorch import CTCLoss
 #import warpctc_pytorch
 #print(warpctc_pytorch.__file__)
 
-from data.data_loader_cm import AudioDataLoader, FeatureDataset, BucketingSampler, DistributedBucketingSampler
+from data.data_loader_cm import AudioDataLoader, FeatureDataset, BucketingSampler, supported_feature_types
 from data.utils import reduce_tensor
 from decoder import GreedyDecoder
 from model import DeepSpeech, supported_rnns
@@ -102,8 +102,7 @@ if __name__ == '__main__':
     # Define model
     rnn_type = rnn_type_.lower()
     assert rnn_type in supported_rnns, 'rnn_type should be either lstm, rnn or gru'
-    assert feature_type_ in ['rawspeech','rawframes','spectrogram','mfcc','logmel'],\
-    'feature_type_ should be rawspeech, rawframes, spectrogram, mfcc, or logmel'
+    assert feature_type_ in supported_feature_types,'feature_type_ should be rawspeech, rawframes, spectrogram, mfcc, or logmel'
     if feature_type_=='rawspeech' and model_type_=='DeepSpeech':
         print('Error: Use rawframes for DeepSpeech instead of rawspeech')
         raise SystemExit
@@ -119,6 +118,9 @@ if __name__ == '__main__':
                        bidirectional=bidirectional_)
     parameters = model.parameters()
     
+    print(model)
+    #print("Number of parameters: %d" % DeepSpeech.get_param_size(model))
+
     # Define optimizer
     optimizer = torch.optim.SGD(parameters, lr=lr_,momentum=momentum_, nesterov=True)
 
@@ -139,9 +141,6 @@ if __name__ == '__main__':
 
     if cuda_:
         model.cuda()
-
-    #print(model)
-    #print("Number of parameters: %d" % DeepSpeech.get_param_size(model))
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
