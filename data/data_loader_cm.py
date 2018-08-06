@@ -84,7 +84,7 @@ class NoiseInjection(object):
 
 
 class FeatureParser(AudioParser):
-    def __init__(self, audio_conf, normalize=False, augment=False):
+    def __init__(self, audio_conf, feature_type, normalize=False, augment=False):
         """
         Parses audio file into spectrogram, MFCCs, or Log Mel-FB features with optional normalization and various augmentations
         :param audio_conf: Dictionary containing the sample rate, window and the window length/stride in seconds
@@ -103,6 +103,8 @@ class FeatureParser(AudioParser):
             'noise_dir') is not None else None
         self.noise_prob = audio_conf.get('noise_prob')
 
+        self.feature_type = feature_type
+        
     def parse_audio(self, audio_path):
         if self.augment:
             y = load_randomly_augmented_audio(audio_path, self.sample_rate)
@@ -115,19 +117,21 @@ class FeatureParser(AudioParser):
         n_fft = int(self.sample_rate * self.window_size)
         win_length = n_fft
         hop_length = int(self.sample_rate * self.window_stride)
-        # Spectrogram
-        frame_len_ = self.sample_rate*self.window_size
-        frame_step_ = self.sample_rate*self.window_stride
-        frames = sigproc.framesig(y,frame_len=frame_len_,frame_step=frame_step_)
-        features = sigproc.magspec(frames,NFFT=int(frame_len_))
-        #features = np.log1p(features)
-        features = torch.FloatTensor(features.transpose())
-        if self.normalize:
-            mean = torch.mean(features,0,keepdim=True)
-            mean = torch.cat([mean]*features.size(0))
-            std = torch.std(features,0,keepdim=True)
-            std =torch.cat([std]*features.size(0))
-            features = (features-mean)/std
+        features = None
+        if self.feature_type=='spectrogram':
+            # Spectrogram
+            frame_len_ = self.sample_rate*self.window_size
+            frame_step_ = self.sample_rate*self.window_stride
+            frames = sigproc.framesig(y,frame_len=frame_len_,frame_step=frame_step_)
+            features = sigproc.magspec(frames,NFFT=int(frame_len_))
+            #features = np.log1p(features)
+            features = torch.FloatTensor(features.transpose())
+            if self.normalize:
+                mean = torch.mean(features,0,keepdim=True)
+                mean = torch.cat([mean]*features.size(0))
+                std = torch.std(features,0,keepdim=True)
+                std =torch.cat([std]*features.size(0))
+                features = (features-mean)/std
         # MFCCs
         #mfcc_feat = mfcc(y,self.sample_rate,winlen=self.window_size,winstep=self.window_stride,numcep=13,nfilt=26)
         #delta = mfccdelta(mfcc_feat,2)
@@ -149,7 +153,7 @@ class FeatureParser(AudioParser):
 
 
 class FeatureDataset(Dataset, FeatureParser):
-    def __init__(self, audio_conf, manifest_filepath, labels, normalize=False, augment=False):
+    def __init__(self, audio_conf, feature_type, manifest_filepath, labels, normalize=False, augment=False):
         """
         Dataset that loads tensors via a csv containing file paths to audio files and transcripts separated by
         a comma. Each new line is a different sample. Example below:
@@ -169,7 +173,10 @@ class FeatureDataset(Dataset, FeatureParser):
         self.ids = ids
         self.size = len(ids)
         self.labels_map = dict([(labels[i], i) for i in range(len(labels))])
-        super(FeatureDataset, self).__init__(audio_conf, normalize, augment)
+        
+        self.feature_type = feature_type
+        
+        super(FeatureDataset, self).__init__(audio_conf, feature_type, normalize, augment)
 
     def __getitem__(self, index):
         sample = self.ids[index]

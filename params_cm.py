@@ -3,14 +3,14 @@
 ###########################################################
 
 # Model and feature type
-model_type = "DeepSpeech" # DeepSpeech, Wav2Letter, or ResNet50
-feature_type = "mfcc" # spectrogram, mfcc, or logmel
+model_type = 'DeepSpeech' # DeepSpeech, Wav2Letter, or ResNet50
+feature_type = 'spectrogram' # spectrogram, mfcc, or logmel
 
 # Audio sampling parameters
 sample_rate   = 16000 # Sample rate
 window_size   = 0.02 # Window size for spectrogram in seconds
 window_stride = 0.01 # Window stride for spectrogram in seconds
-window        = "hamming" # Window type to generate spectrogram
+window        = 'hamming' # Window type to generate spectrogram
 
 # Audio noise parameters
 noise_dir  = None # directory to inject noise
