@@ -1,6 +1,6 @@
 # Summary
 
-Documentation of summer 2018 internship project using Sean Naren's implementation of DeepSpeech2.
+CM: Documentation of summer 2018 internship project using Sean Naren's implementation of DeepSpeech2. Comments that I added to the existing documentation are marked with 'CM'.
 
 # deepspeech.pytorch
 
@@ -51,6 +51,7 @@ git clone --recursive https://github.com/parlance/ctcdecode.git
 cd ctcdecode
 pip install .
 ```
+CM: I installed ctcdecode inside the speech repo.
 
 Finally clone this repo and run this within the repo:
 ```
@@ -65,6 +66,7 @@ There is no official Dockerhub image, however a Dockerfile is provided to build 
 sudo nvidia-docker build -t  deepspeech2.docker .
 sudo nvidia-docker run -ti -v `pwd`/data:/workspace/data -p 8888:8888 deepspeech2.docker # Opens a Jupyter notebook, mounting the /data drive in the container
 ```
+CM: I didn't use this.
 
 If you'd prefer bash:
 
