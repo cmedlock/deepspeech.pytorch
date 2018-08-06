@@ -4,7 +4,7 @@
 
 # Model and feature type
 model_type = 'DeepSpeech' # DeepSpeech, Wav2Letter, or ResNet50
-feature_type = 'spectrogram' # spectrogram, mfcc, or logmel
+feature_type = 'mfcc' # spectrogram, mfcc, or logmel
 
 # Audio sampling parameters
 sample_rate   = 16000 # Sample rate

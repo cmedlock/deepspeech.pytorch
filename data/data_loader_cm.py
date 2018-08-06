@@ -114,8 +114,8 @@ class FeatureParser(AudioParser):
             add_noise = np.random.binomial(1, self.noise_prob)
             if add_noise:
                 y = self.noiseInjector.inject_noise(y)
-        n_fft = int(self.sample_rate * self.window_size)
-        win_length = n_fft
+        #n_dft = int(self.sample_rate * self.window_size)
+        win_length = int(self.sample_rate * self.window_size)
         hop_length = int(self.sample_rate * self.window_stride)
         features = None
         if self.feature_type=='spectrogram':
@@ -132,20 +132,22 @@ class FeatureParser(AudioParser):
                 std = torch.std(features,0,keepdim=True)
                 std =torch.cat([std]*features.size(0))
                 features = (features-mean)/std
-        # MFCCs
-        #mfcc_feat = mfcc(y,self.sample_rate,winlen=self.window_size,winstep=self.window_stride,numcep=13,nfilt=26)
-        #delta = mfccdelta(mfcc_feat,2)
-        #deltadelta = mfccdelta(delta,2)
-        #mfcc_feat = torch.FloatTensor(mfcc_feat.transpose())
-        #delta = torch.FloatTensor(delta.transpose())
-        #deltadelta = torch.FloatTensor(deltadelta.transpose())
-        #features = torch.cat((mfcc_feat,delta,deltadelta),0)
-        #if self.normalize:
-        #    mean = torch.mean(features,0,keepdim=True)
-        #    mean = torch.cat([mean]*features.size(0))
-        #    std = torch.std(features,0,keepdim=True)
-        #    std =torch.cat([std]*features.size(0))
-        #    features = (features-mean)/std
+        elif self.feature_type=='mfcc':
+            # MFCCs
+            mfcc_feat = mfcc(y,self.sample_rate,winlen=self.window_size,winstep=self.window_stride,
+                             numcep=int(win_length/2+1),nfilt=int(win_length/2+1))
+            delta = mfccdelta(mfcc_feat,2)
+            deltadelta = mfccdelta(delta,2)
+            mfcc_feat = torch.FloatTensor(mfcc_feat.transpose())
+            delta = torch.FloatTensor(delta.transpose())
+            deltadelta = torch.FloatTensor(deltadelta.transpose())
+            features = mfcc_feat#torch.cat((mfcc_feat,delta,deltadelta),0)
+            if self.normalize:
+                mean = torch.mean(features,0,keepdim=True)
+                mean = torch.cat([mean]*features.size(0))
+                std = torch.std(features,0,keepdim=True)
+                std =torch.cat([std]*features.size(0))
+                features = (features-mean)/std
         return features
 
     def parse_transcript(self, transcript_path):

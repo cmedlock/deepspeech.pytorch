@@ -11,7 +11,7 @@ from warpctc_pytorch import CTCLoss
 #import warpctc_pytorch
 #print(warpctc_pytorch.__file__)
 
-from data.data_loader import AudioDataLoader, SpectrogramDataset, BucketingSampler, DistributedBucketingSampler
+from data.data_loader_cm import AudioDataLoader, FeatureDataset, BucketingSampler, DistributedBucketingSampler
 from data.utils import reduce_tensor
 from decoder import GreedyDecoder
 from model import DeepSpeech, supported_rnns
@@ -60,7 +60,6 @@ cuda_ = params_cm.cuda
 
 torch.manual_seed(123456)
 torch.cuda.manual_seed_all(123456)
-
 
 def to_np(x):
     return x.data.cpu().numpy()
@@ -120,10 +119,8 @@ if __name__ == '__main__':
 
     criterion = CTCLoss()
     decoder = GreedyDecoder(labels)
-    train_dataset = SpectrogramDataset(audio_conf=audio_conf, manifest_filepath=train_manifest_, labels=labels,
-                                       normalize=True, augment=augment_)
-    test_dataset = SpectrogramDataset(audio_conf=audio_conf, manifest_filepath=val_manifest_, labels=labels,
-                                      normalize=True, augment=False)
+    train_dataset = FeatureDataset(audio_conf=audio_conf, feature_type=feature_type_, manifest_filepath=train_manifest_,                                            labels=labels, normalize=True, augment=augment_)
+    test_dataset = FeatureDataset(audio_conf=audio_conf, feature_type=feature_type_, manifest_filepath=val_manifest_,                                             labels=labels, normalize=True, augment=False)
 
     train_sampler = BucketingSampler(train_dataset, batch_size=batch_size_)
 
@@ -136,8 +133,8 @@ if __name__ == '__main__':
     if cuda_:
         model.cuda()
 
-    print(model)
-    print("Number of parameters: %d" % DeepSpeech.get_param_size(model))
+    #print(model)
+    #print("Number of parameters: %d" % DeepSpeech.get_param_size(model))
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
