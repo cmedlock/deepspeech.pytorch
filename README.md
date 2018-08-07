@@ -21,10 +21,10 @@ mkdir build && cd build
 cmake ..
 make -j2
 ```
-Download training texts and/or pre-trained language models for LibriSpeech from the [OpenSLR website](http://www.openslr.org/resources/11/). To train a 5-gram language model from the corpus ```librispeech-lm-corpus.txt```, do
+Download training texts and/or pre-trained language models for LibriSpeech from the [OpenSLR website](http://www.openslr.org/resources/11/). To train a 5-gram language model from the corpus ```corpus.txt```, do
 ```
 cd kenlm
-build/bin/lmplz -o 5 librispeech-lm-corpus.txt 5-gram.arpa
+build/bin/lmplz -o 5 corpus.txt 5-gram.arpa
 ```
 To convert to binary format (which is necessary to use it in beam search decoding),
 ```
